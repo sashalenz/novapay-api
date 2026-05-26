@@ -42,6 +42,35 @@ src/
 
 ---
 
+## Credentials система
+
+```
+src/
+├── NovapayCredentials.php      — immutable DTO: login, refreshToken, publicCertificate
+│                                 ::fromConfig(), ::fromModel(), withUpdatedTokens()
+└── HasNovapayCredentials.php   — інтерфейс для Eloquent моделей
+                                  getNovapayLogin(), getNovapayRefreshToken(), getNovapayPublicCertificate()
+```
+
+**4 способи автентифікації:**
+```php
+NovapayApi::auth()->jwtFromConfig();                    // з .env
+NovapayApi::auth()->jwt($token, $login, $cert);         // явно
+NovapayApi::authenticateWith($credentials);             // з NovapayCredentials DTO
+NovapayApi::authenticateAs($bankAccountModel);          // з Eloquent моделі
+```
+
+**Після отримання jwt — завжди зберегти нові токени:**
+```php
+$auth = NovapayApi::authenticateAs($bankAccount);
+$bankAccount->updateNovapayTokens($auth->refresh_token, $auth->public_certificate);
+$jwt = $auth->jwt;
+```
+
+**`NovapayCredentials` — immutable**, `withUpdatedTokens()` повертає новий інстанс.
+
+---
+
 ## Ключові патерни
 
 ### SOAP замість REST

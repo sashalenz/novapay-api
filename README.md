@@ -47,24 +47,100 @@ NOVAPAY_TIMEOUT=30
 
 ```php
 use Sashalenz\NovapayApi\NovapayApi;
+use Sashalenz\NovapayApi\NovapayCredentials;
 
-// З конфігу (.env)
+// 1. З конфігу (.env)
 $auth = NovapayApi::auth()->jwtFromConfig();
 
-// Або явно
+// 2. Явно (параметри)
 $auth = NovapayApi::auth()->jwt(
     refreshToken: 'REFRESH_TOKEN',
     login: 'your_login',
     publicCertificate: '-----BEGIN RSA PUBLIC KEY-----...',
 );
 
-$jwt              = $auth->jwt;               // токен для API запитів
-$newRefreshToken  = $auth->refresh_token;     // зберегти для наступного разу
-$newCertificate   = $auth->public_certificate; // зберегти для наступного разу
-$expiration       = $auth->expiration;
+// 3. З DTO NovapayCredentials
+$credentials = new NovapayCredentials(
+    login: $bankAccount->novapay_login,
+    refreshToken: $bankAccount->novapay_refresh_token,
+    publicCertificate: $bankAccount->novapay_public_certificate,
+);
+$auth = NovapayApi::authenticateWith($credentials);
+
+// 4. Напряму з моделі (через HasNovapayCredentials інтерфейс)
+$auth = NovapayApi::authenticateAs($bankAccount);
+
+$jwt             = $auth->jwt;               // токен для API запитів
+$newRefreshToken = $auth->refresh_token;     // зберегти в БД
+$newCertificate  = $auth->public_certificate; // зберегти в БД
 ```
 
-> ⚠️ Після кожного успішного `jwt()` старий `refresh_token` анульовується. Зберігай нові значення до своєї БД/кешу.
+> ⚠️ Після кожного успішного виклику старий `refresh_token` анульовується. Зберігай нові значення одразу після відповіді.
+
+### Інтеграція з Eloquent моделлю
+
+Реалізуй інтерфейс `HasNovapayCredentials` на моделі, де зберігаються облікові дані:
+
+```php
+use Sashalenz\NovapayApi\HasNovapayCredentials;
+use Sashalenz\NovapayApi\NovapayApi;
+
+class BankAccount extends Model implements HasNovapayCredentials
+{
+    public function getNovapayLogin(): string
+    {
+        return $this->novapay_login;
+    }
+
+    public function getNovapayRefreshToken(): string
+    {
+        return $this->novapay_refresh_token;
+    }
+
+    public function getNovapayPublicCertificate(): string
+    {
+        return $this->novapay_public_certificate;
+    }
+
+    public function updateNovapayTokens(string $refreshToken, string $publicCertificate): void
+    {
+        $this->update([
+            'novapay_refresh_token'      => $refreshToken,
+            'novapay_public_certificate' => $publicCertificate,
+        ]);
+    }
+
+    /**
+     * Отримати JWT і одразу оновити токени в БД.
+     */
+    public function refreshNovapayJwt(): string
+    {
+        $response = NovapayApi::authenticateAs($this);
+
+        $this->updateNovapayTokens(
+            $response->refresh_token,
+            $response->public_certificate,
+        );
+
+        return $response->jwt;
+    }
+}
+```
+
+Використання:
+
+```php
+$jwt = $bankAccount->refreshNovapayJwt();
+
+$accounts = NovapayApi::accounts()
+    ->withJwt($jwt)
+    ->list(clientId: $bankAccount->novapay_client_id);
+```
+
+> 💡 `NovapayCredentials::withUpdatedTokens()` дозволяє оновити токени immutably, зберігаючи той самий `login`:
+> ```php
+> $updated = $credentials->withUpdatedTokens($auth->refresh_token, $auth->public_certificate);
+> ```
 
 ### Легасі (буде відключено 31.08.2026)
 

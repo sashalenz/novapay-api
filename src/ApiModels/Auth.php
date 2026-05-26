@@ -3,6 +3,8 @@
 namespace Sashalenz\NovapayApi\ApiModels;
 
 use Sashalenz\NovapayApi\Exceptions\NovapayApiException;
+use Sashalenz\NovapayApi\HasNovapayCredentials;
+use Sashalenz\NovapayApi\NovapayCredentials;
 use Sashalenz\NovapayApi\ResponseData\Auth\JwtAuthResponse;
 use Sashalenz\NovapayApi\ResponseData\Auth\PreAuthResponse;
 use Sashalenz\NovapayApi\ResponseData\Auth\RefreshAuthResponse;
@@ -33,18 +35,38 @@ class Auth extends BaseModel
     }
 
     /**
-     * 3.1 — JWT Authorization using config credentials.
+     * 3.1 — JWT Authorization using config credentials (.env).
      *
      * @throws NovapayApiException
      */
     public function jwtFromConfig(?string $requestRef = null): JwtAuthResponse
     {
+        return $this->jwtFromCredentials(NovapayCredentials::fromConfig(), $requestRef);
+    }
+
+    /**
+     * 3.1 — JWT Authorization using a NovapayCredentials DTO.
+     *
+     * @throws NovapayApiException
+     */
+    public function jwtFromCredentials(NovapayCredentials $credentials, ?string $requestRef = null): JwtAuthResponse
+    {
         return $this->jwt(
-            refreshToken: config('novapay-api.refresh_token'),
-            login: config('novapay-api.login'),
-            publicCertificate: config('novapay-api.public_certificate'),
+            refreshToken: $credentials->refreshToken,
+            login: $credentials->login,
+            publicCertificate: $credentials->publicCertificate,
             requestRef: $requestRef,
         );
+    }
+
+    /**
+     * 3.1 — JWT Authorization using a model that implements HasNovapayCredentials.
+     *
+     * @throws NovapayApiException
+     */
+    public function jwtFromModel(HasNovapayCredentials $model, ?string $requestRef = null): JwtAuthResponse
+    {
+        return $this->jwtFromCredentials(NovapayCredentials::fromModel($model), $requestRef);
     }
 
     /**
