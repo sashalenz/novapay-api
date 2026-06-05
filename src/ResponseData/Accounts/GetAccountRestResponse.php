@@ -10,10 +10,12 @@ class GetAccountRestResponse extends Data
     public function __construct(
         public ?string $request_ref,
         public string $response_ref,
-        public string $result,
-        public float $confirmed_balance,
-        public float $available_balance,
-        public float $projected_balance,
+        // Optional: absent on error responses (only request_ref/response_ref/error
+        // are returned), so isSuccessful() can short-circuit instead of crashing.
+        public ?string $result = null,
+        public ?float $confirmed_balance = null,
+        public ?float $available_balance = null,
+        public ?float $projected_balance = null,
         public ?ApiError $error = null,
     ) {}
 

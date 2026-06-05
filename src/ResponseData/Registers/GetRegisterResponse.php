@@ -9,9 +9,11 @@ class GetRegisterResponse extends Data
 {
     public function __construct(
         public string $response_ref,
-        public string $result,
-        public int $statement_id,
-        public string $created_datetime,
+        // Optional: absent on error responses (only response_ref/error are
+        // returned), so isSuccessful() can short-circuit instead of crashing.
+        public ?string $result = null,
+        public ?int $statement_id = null,
+        public ?string $created_datetime = null,
         public ?ApiError $error = null,
     ) {}
 

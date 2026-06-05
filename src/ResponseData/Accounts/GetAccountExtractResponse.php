@@ -10,11 +10,13 @@ class GetAccountExtractResponse extends Data
     public function __construct(
         public ?string $request_ref,
         public string $response_ref,
-        public string $result,
+        // Optional: absent on error responses (only request_ref/response_ref/error
+        // are returned), so isSuccessful() can short-circuit instead of crashing.
+        public ?string $result = null,
         /**
          * Raw XML string (CDATA) containing <Extract> document with ExtractHead + Docs.
          */
-        public ?string $extract,
+        public ?string $extract = null,
         public ?ApiError $error = null,
     ) {}
 

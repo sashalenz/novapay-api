@@ -15,11 +15,13 @@ class PreAuthResponse extends Data
     public function __construct(
         public ?string $request_ref,
         public string $response_ref,
-        public string $result,
-        public ?string $user_id,          // keep as string; cast to int where needed
-        public ?string $temp_principal,
-        public ?string $code_operation_otp, // keep as string; cast to int where needed
-        public ?string $expiration,
+        // Optional: absent on error responses (only request_ref/response_ref/error
+        // are returned), so isSuccessful() can short-circuit instead of crashing.
+        public ?string $result = null,
+        public ?string $user_id = null,          // keep as string; cast to int where needed
+        public ?string $temp_principal = null,
+        public ?string $code_operation_otp = null, // keep as string; cast to int where needed
+        public ?string $expiration = null,
         public ?ApiError $error = null,
     ) {}
 
